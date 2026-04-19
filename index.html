@@ -573,18 +573,18 @@ function save(r){
 function doRiasec(nom,prenom){
   const scores={}; ['R','I','A','S','E','C'].forEach(l=>scores[l]=Object.keys(answers).filter(k=>k.startsWith(l+'_')&&answers[k]).length);
   const top3=Object.entries(scores).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]);
-  save({nom,prenom,scores,top3,lang,test:'riasec',ts:Date.now()});
+  save({name:`${nom} ${prenom}`.trim(),scores,top3,lang,test:'riasec',ts:Date.now()});
   showRiasecResults(`${nom} ${prenom}`,scores,top3); showPage('page-results');
 }
 function doValeurs(nom,prenom){
   const sel=VL[lang].filter((_,i)=>answers[`v_${i}`]).map(v=>v.k);
-  save({nom,prenom,selected:sel,top3:sel.slice(0,3),lang,test:'valeurs',ts:Date.now()});
+  save({name:`${nom} ${prenom}`.trim(),selected:sel,top3:sel.slice(0,3),lang,test:'valeurs',ts:Date.now()});
   showValeursResults(`${nom} ${prenom}`,sel); showPage('page-results');
 }
 function doInt(nom,prenom){
   const scores={}; Object.keys(II[lang]).forEach(k=>scores[k]=Object.keys(answers).filter(a=>a.startsWith(k+'_')&&answers[a]).length);
   const top3=Object.entries(scores).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]);
-  save({nom,prenom,scores,top3,lang,test:'intelligences',ts:Date.now()});
+  save({name:`${nom} ${prenom}`.trim(),scores,top3,lang,test:'intelligences',ts:Date.now()});
   showIntResults(`${nom} ${prenom}`,scores,top3); showPage('page-results');
 }
 
@@ -707,7 +707,7 @@ function renderTable(results){
     else if(r.test==='valeurs'&&r.selected) detail=r.selected.slice(0,6).join(', ')+(r.selected.length>6?'…':'');
     const cat=CATALOG.find(c=>c.id===r.test);
     return `<tr>
-      <td style="font-weight:600">${r.nom?r.nom+' '+(r.prenom||''): r.prenom||tr.anon}</td>
+      <td style="font-weight:600">${r.name||tr.anon}</td>
       <td><span style="font-size:11px;padding:3px 9px;border-radius:99px;background:var(--surface2);color:var(--text2)">${cat?cat.name[lang]:r.test}</span></td>
       <td><div class="chips">${chips}</div></td>
       <td style="font-size:12px;color:var(--text2);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${detail}</td>
