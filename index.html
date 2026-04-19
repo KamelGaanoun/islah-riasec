@@ -755,9 +755,39 @@ function exportCSV(){
 // ══════════════════════════════════════════
 //  ROUTER
 // ══════════════════════════════════════════
+function loadEnabledTests(callback){
+  // Always init defaults first
+  CATALOG.forEach(c=>{ if(enabledTests[c.id]===undefined) enabledTests[c.id]=true; });
+  if(!db){ callback(); return; }
+  // Load config from Firebase then call callback
+  db.ref('config/enabledTests').once('value', snap=>{
+    if(snap.val()) Object.assign(enabledTests, snap.val());
+    callback();
+  }).catch(()=>{ callback(); });
+}
+
+// Listen for real-time config changes (when admin toggles a test)
+function watchEnabledTests(){
+  if(!db) return;
+  db.ref('config/enabledTests').on('value', snap=>{
+    if(snap.val()){
+      Object.assign(enabledTests, snap.val());
+      // Re-render home if visible so changes appear instantly
+      const homePage = document.getElementById('page-home');
+      if(homePage && homePage.classList.contains('active')) renderHome();
+    }
+  });
+}
+
 function route(){
   if(location.hash==='#admin'){ loadAdmin(); showPage('page-admin'); }
-  else showPage('page-lang');
+  else {
+    // Load config from Firebase before showing lang screen
+    loadEnabledTests(()=>{
+      watchEnabledTests();
+      showPage('page-lang');
+    });
+  }
 }
 window.addEventListener('hashchange',route);
 window.addEventListener('load',route);
