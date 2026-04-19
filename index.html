@@ -761,7 +761,7 @@ function exportCSV(){
     else if(r.test==='intelligences'&&r.scores) detail=Object.entries(r.scores).map(([k,v])=>`${k}:${v}`).join(' ');
     else if(r.test==='valeurs'&&r.selected) detail=r.selected.join(', ');
     const cat=CATALOG.find(c=>c.id===r.test);
-    return [`${r.nom||''} ${r.prenom||''}`.trim()||tr.anon, cat?cat.name['fr']:r.test, ...(r.top3||['','','']).slice(0,3), detail, ds];
+    return [r.name||tr.anon, cat?cat.name['fr']:r.test, ...(r.top3||['','','']).slice(0,3), detail, ds];
   });
   const csv=[header,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
@@ -782,7 +782,7 @@ function exportExcel(){
     else if(r.test==='intelligences'&&r.scores) detail=Object.entries(r.scores).map(([k,v])=>`${k}:${v}`).join(' ');
     else if(r.test==='valeurs'&&r.selected) detail=r.selected.join(', ');
     const cat=CATALOG.find(c=>c.id===r.test);
-    return [`${r.nom||''} ${r.prenom||''}`.trim()||tr.anon, cat?cat.name['fr']:r.test, ...(r.top3||['','','']).slice(0,3), detail, ds];
+    return [r.name||tr.anon, cat?cat.name['fr']:r.test, ...(r.top3||['','','']).slice(0,3), detail, ds];
   });
 
   // Create workbook with SheetJS
@@ -811,7 +811,7 @@ function exportExcel(){
       if(r.test==='riasec'&&r.scores) detail=Object.entries(r.scores).map(([k,v])=>`${k}:${v}`).join(' ');
       else if(r.test==='intelligences'&&r.scores) detail=Object.entries(r.scores).map(([k,v])=>`${k}:${v}`).join(' ');
       else if(r.test==='valeurs'&&r.selected) detail=r.selected.join(', ');
-      return [`${r.nom||''} ${r.prenom||''}`.trim()||tr.anon, ...(r.top3||['','','']).slice(0,3), detail, ds];
+      return [r.name||tr.anon, ...(r.top3||['','','']).slice(0,3), detail, ds];
     });
     const testHeader=[tr.colName,'Profil 1','Profil 2','Profil 3',tr.colDetail,tr.colDate];
     const wsTest=XLSX.utils.aoa_to_sheet([testHeader,...testRows]);
