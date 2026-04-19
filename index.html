@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Kufi+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
 :root{--bg:#F4F3EF;--surface:#FFFFFF;--surface2:#EEEDE9;--surface3:#E5E4DF;--accent:#2563EB;--text:#1A1917;--text2:#6B6860;--text3:#A3A199;--border:#E2E0DA;--success:#16A34A;--danger:#DC2626;--radius:14px;--radius-sm:8px;font-family:'Outfit',sans-serif;}
 [dir="rtl"]{font-family:'Noto Kufi Arabic',sans-serif;}
@@ -315,7 +315,7 @@ let db=null;
 function initFirebase(cfg){
   try{
     firebase.initializeApp(cfg);
-    db=firebase.database();
+    db=firebase.firestore();
     console.log('Firebase connecté');
   }catch(e){ console.warn('Firebase non configuré'); }
 }
@@ -559,7 +559,12 @@ function submitTest(){
   else if(currentTest.type==='valeurs') doValeurs(fullName);
   else doInt(fullName);
 }
-function save(r){ if(db) db.ref(`results/${r.test}`).push(r).then(()=>showToast(t().saved)).catch(()=>{}); }
+function save(r){
+  if(!db) return;
+  db.collection('results').add(r)
+    .then(()=>showToast(t().saved))
+    .catch(e=>console.warn('Save error',e));
+}
 
 function doRiasec(name){
   const scores={}; ['R','I','A','S','E','C'].forEach(l=>scores[l]=Object.keys(answers).filter(k=>k.startsWith(l+'_')&&answers[k]).length);
@@ -641,23 +646,24 @@ function loadAdmin(){
 
   if(!db){ renderTable([]); renderStats([]); return; }
 
-  let allData={riasec:[],valeurs:[],intelligences:[]};
-  CATALOG.forEach(c=>{
-    db.ref(`results/${c.id}`).on('value',snap=>{
-      allData[c.id]=[];
-      snap.forEach(ch=>allData[c.id].push({id:ch.key,...ch.val()}));
-      allResults=[...allData.riasec,...allData.valeurs,...allData.intelligences].sort((a,b)=>b.ts-a.ts);
+  // Listen results in real-time
+  db.collection('results')
+    .orderBy('ts','desc')
+    .onSnapshot(snap=>{
+      allResults=[];
+      snap.forEach(doc=>allResults.push({id:doc.id,...doc.data()}));
       const filtered=activeFilter==='all'?allResults:allResults.filter(r=>r.test===activeFilter);
       renderTable(filtered); renderStats(allResults);
-    });
-  });
-  db.ref('config/enabledTests').on('value',snap=>{
-    const val = snap.val();
-    // Repartir de false pour tout, puis appliquer ce qui est dans Firebase
-    CATALOG.forEach(c=>{ enabledTests[c.id] = val ? (val[c.id] !== false) : true; });
-    renderToggleGrid();
-    renderHome();
-  });
+    }, e=>console.warn('Results listener error',e));
+
+  // Listen config in real-time
+  db.collection('config').doc('enabledTests')
+    .onSnapshot(snap=>{
+      const val = snap.exists ? snap.data() : null;
+      CATALOG.forEach(c=>{ enabledTests[c.id] = val ? (val[c.id] !== false) : true; });
+      renderToggleGrid();
+      renderHome();
+    }, e=>console.warn('Config listener error',e));
 }
 
 function setFilter(f){
@@ -725,7 +731,9 @@ function toggleTest(id,val){
   const tr=t(), el=document.getElementById(`ts-${id}`);
   if(el){ el.textContent=val?tr.on:tr.off; el.className=`toggle-status ${val?'on':'off'}`; }
   renderHome();
-  if(db) db.ref(`config/enabledTests/${id}`).set(val);
+  if(db) db.collection('config').doc('enabledTests')
+    .set({[id]:val},{merge:true})
+    .catch(e=>console.warn('Toggle error',e));
   showToast(tl(`Test ${val?'activé':'désactivé'}`,`تم ${val?'تفعيل':'تعطيل'} الاختبار`));
 }
 
@@ -763,27 +771,27 @@ function loadEnabledTests(callback){
   CATALOG.forEach(c=>{ if(enabledTests[c.id]===undefined) enabledTests[c.id]=true; });
   if(!db){ callback(); return; }
   // Load config from Firebase then call callback
-  db.ref('config/enabledTests').once('value', snap=>{
-    const val = snap.val();
-    // Pour chaque test : actif par défaut, sauf si Firebase dit explicitement false
-    CATALOG.forEach(c=>{ enabledTests[c.id] = val ? (val[c.id] !== false) : true; });
-    callback();
-  }).catch(()=>{
-    CATALOG.forEach(c=>{ enabledTests[c.id]=true; });
-    callback();
-  });
+  db.collection('config').doc('enabledTests').get()
+    .then(doc=>{
+      const val = doc.exists ? doc.data() : null;
+      CATALOG.forEach(c=>{ enabledTests[c.id] = val ? (val[c.id] !== false) : true; });
+      callback();
+    })
+    .catch(()=>{
+      CATALOG.forEach(c=>{ enabledTests[c.id]=true; });
+      callback();
+    });
 }
 
 // Listen for real-time config changes (when admin toggles a test)
 function watchEnabledTests(){
   if(!db) return;
-  db.ref('config/enabledTests').on('value', snap=>{
-    const val = snap.val();
+  db.collection('config').doc('enabledTests').onSnapshot(snap=>{
+    const val = snap.exists ? snap.data() : null;
     CATALOG.forEach(c=>{ enabledTests[c.id] = val ? (val[c.id] !== false) : true; });
-    // Re-render home si visible pour que les changements s'appliquent instantanément
     const homePage = document.getElementById('page-home');
     if(homePage && homePage.classList.contains('active')) renderHome();
-  });
+  }, e=>console.warn('Watch config error',e));
 }
 
 function route(){
