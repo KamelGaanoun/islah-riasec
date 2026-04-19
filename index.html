@@ -305,21 +305,21 @@ td{padding:11px 14px;font-size:13px;border-top:1px solid var(--border);}
 
 <div class="toast" id="toast"></div>
 
+<script src="config.js"></script>
 <script>
 // ══════════════════════════════════════════
 //  FIREBASE
 // ══════════════════════════════════════════
-const firebaseConfig = {
-  apiKey: "AIzaSyCyj-JhemTCJRTDje0h1Z71En4rM0XSPsw",
-  authDomain: "islah-riasec.firebaseapp.com",
-  databaseURL: "https://islah-riasec-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "islah-riasec",
-  storageBucket: "islah-riasec.firebasestorage.app",
-  messagingSenderId: "212531888300",
-  appId: "1:212531888300:web:004816ab69fa7c921b5f09"
-};
+// Les clés Firebase sont dans config.js (non versionné sur GitHub)
+// Voir config.example.js pour le modèle
 let db=null;
-try{firebase.initializeApp(firebaseConfig);db=firebase.database();}catch(e){console.warn('Firebase non configuré');}
+function initFirebase(cfg){
+  try{
+    firebase.initializeApp(cfg);
+    db=firebase.database();
+    console.log('Firebase connecté');
+  }catch(e){ console.warn('Firebase non configuré'); }
+}
 
 // ══════════════════════════════════════════
 //  I18N
