@@ -375,7 +375,7 @@ const CATALOG=[
 //  STATE
 // ══════════════════════════════════════════
 let lang='fr', currentTest=null, answers={}, enabledTests={}, allResults=[], activeFilter='all';
-CATALOG.forEach(t=>{ enabledTests[t.id]=true; });
+// enabledTests initialisé vide — Firebase le remplira via loadEnabledTests()
 
 // ══════════════════════════════════════════
 //  UTILS
@@ -653,7 +653,11 @@ function loadAdmin(){
     });
   });
   db.ref('config/enabledTests').on('value',snap=>{
-    if(snap.val()){ Object.assign(enabledTests,snap.val()); renderToggleGrid(); renderHome(); }
+    const val = snap.val();
+    // Repartir de false pour tout, puis appliquer ce qui est dans Firebase
+    CATALOG.forEach(c=>{ enabledTests[c.id] = val ? (val[c.id] !== false) : true; });
+    renderToggleGrid();
+    renderHome();
   });
 }
 
@@ -761,21 +765,25 @@ function loadEnabledTests(callback){
   if(!db){ callback(); return; }
   // Load config from Firebase then call callback
   db.ref('config/enabledTests').once('value', snap=>{
-    if(snap.val()) Object.assign(enabledTests, snap.val());
+    const val = snap.val();
+    // Pour chaque test : actif par défaut, sauf si Firebase dit explicitement false
+    CATALOG.forEach(c=>{ enabledTests[c.id] = val ? (val[c.id] !== false) : true; });
     callback();
-  }).catch(()=>{ callback(); });
+  }).catch(()=>{
+    CATALOG.forEach(c=>{ enabledTests[c.id]=true; });
+    callback();
+  });
 }
 
 // Listen for real-time config changes (when admin toggles a test)
 function watchEnabledTests(){
   if(!db) return;
   db.ref('config/enabledTests').on('value', snap=>{
-    if(snap.val()){
-      Object.assign(enabledTests, snap.val());
-      // Re-render home if visible so changes appear instantly
-      const homePage = document.getElementById('page-home');
-      if(homePage && homePage.classList.contains('active')) renderHome();
-    }
+    const val = snap.val();
+    CATALOG.forEach(c=>{ enabledTests[c.id] = val ? (val[c.id] !== false) : true; });
+    // Re-render home si visible pour que les changements s'appliquent instantanément
+    const homePage = document.getElementById('page-home');
+    if(homePage && homePage.classList.contains('active')) renderHome();
   });
 }
 
