@@ -305,7 +305,6 @@ td{padding:11px 14px;font-size:13px;border-top:1px solid var(--border);}
 
 <div class="toast" id="toast"></div>
 
-<script src="config.js"></script>
 <script>
 // ══════════════════════════════════════════
 //  FIREBASE
@@ -798,7 +797,14 @@ function route(){
   }
 }
 window.addEventListener('hashchange',route);
-window.addEventListener('load',route);
+// route() est appelé par config.js après initFirebase()
+// Fallback si config.js absent (mode sans Firebase)
+window.addEventListener('load',()=>{
+  setTimeout(()=>{
+    if(!window._routeCalled) route();
+  }, 200);
+});
 </script>
+<script src="config.js"></script>
 </body>
 </html>
