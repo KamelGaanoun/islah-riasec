@@ -893,7 +893,7 @@ function openDetail(idx){
     const names = RN[lang];
     ['R','I','A','S','E','C'].forEach(l=>{
       const score = r.scores?.[l]||0;
-      const items = r.details?.[l] ? r.details[l].split('||') : [];
+      const raw = r.details?.[l]; const items = Array.isArray(raw) ? raw : (raw ? raw.split('||') : []);
       body += `<div class="detail-section">
         <div class="detail-section-title">
           <span class="detail-dot" style="background:${RC[l]}"></span>
@@ -911,7 +911,7 @@ function openDetail(idx){
     const keys = Object.keys(II['fr']);
     keys.forEach(k=>{
       const score = r.scores?.[k]||0;
-      const items = r.details?.[k] ? r.details[k].split('||') : [];
+      const raw = r.details?.[k]; const items = Array.isArray(raw) ? raw : (raw ? raw.split('||') : []);
       body += `<div class="detail-section">
         <div class="detail-section-title">
           <span class="detail-dot" style="background:${IC[k]}"></span>
