@@ -182,6 +182,29 @@ td{padding:11px 14px;font-size:13px;border-top:1px solid var(--border);}
 .toggle-status.on{color:var(--success);}
 .toggle-status.off{color:var(--text3);}
 
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;opacity:0;pointer-events:none;transition:opacity .2s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--surface);border-radius:20px;width:100%;max-width:640px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);}
+.modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);border-radius:20px 20px 0 0;}
+.modal-header h3{font-size:17px;font-weight:700;}
+.modal-header p{font-size:13px;color:var(--text2);margin-top:2px;}
+.modal-close{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.modal-close svg{width:15px;height:15px;stroke:var(--text);fill:none;}
+.modal-body{padding:20px 24px 24px;}
+.detail-section{margin-bottom:20px;}
+.detail-section-title{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.detail-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.detail-items{display:flex;flex-direction:column;gap:6px;}
+.detail-item{font-size:13px;color:var(--text);padding:9px 14px;background:var(--surface2);border-radius:var(--radius-sm);line-height:1.5;border-left:3px solid var(--item-color,var(--accent));}
+.detail-score-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;color:#fff;margin-left:auto;flex-shrink:0;}
+.detail-empty{font-size:13px;color:var(--text3);font-style:italic;}
+tr.clickable{cursor:pointer;}
+tr.clickable:hover td{background:var(--surface2);}
+.modal-test-tag{font-size:11px;padding:3px 10px;border-radius:99px;font-weight:500;}
+.detail-val-grid{display:flex;flex-wrap:wrap;gap:6px;}
+.detail-val-chip{padding:6px 12px;border-radius:99px;font-size:12px;font-weight:500;background:var(--surface2);color:var(--text);}
+.detail-val-chip.top{background:#FFFBEB;color:#92400E;border:1px solid #F59E0B;}
+.no-detail{text-align:center;padding:32px;color:var(--text2);font-size:14px;}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);color:#fff;padding:11px 22px;border-radius:99px;font-size:13px;font-weight:500;opacity:0;transition:all .3s;z-index:100;white-space:nowrap;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
 [dir="rtl"] .btn-back svg,[dir="rtl"] .btn-start svg{transform:scaleX(-1);}
@@ -305,6 +328,22 @@ td{padding:11px 14px;font-size:13px;border-top:1px solid var(--border);}
   <div id="tab-cfg" class="admin-section">
     <p style="font-size:14px;color:var(--text2);margin-bottom:16px" id="cfg-help">Activez ou désactivez les tests visibles par les élèves.</p>
     <div class="tests-toggle-grid" id="toggle-grid"></div>
+  </div>
+</div>
+
+<!-- ═══ DETAIL MODAL ═══ -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div>
+        <h3 id="modal-name">Détails</h3>
+        <p id="modal-meta"></p>
+      </div>
+      <button class="modal-close" onclick="closeModal()">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
   </div>
 </div>
 
@@ -571,9 +610,13 @@ function save(r){
 }
 
 function doRiasec(nom,prenom){
-  const scores={}; ['R','I','A','S','E','C'].forEach(l=>scores[l]=Object.keys(answers).filter(k=>k.startsWith(l+'_')&&answers[k]).length);
+  const scores={}, details={};
+  ['R','I','A','S','E','C'].forEach(l=>{
+    scores[l]=Object.keys(answers).filter(k=>k.startsWith(l+'_')&&answers[k]).length;
+    details[l]=RI['fr'][l].filter((_,i)=>answers[`${l}_${i}`]);
+  });
   const top3=Object.entries(scores).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]);
-  save({name:`${nom} ${prenom}`.trim(),scores,top3,lang,test:'riasec',ts:Date.now()});
+  save({name:`${nom} ${prenom}`.trim(),scores,details,top3,lang,test:'riasec',ts:Date.now()});
   showRiasecResults(`${nom} ${prenom}`,scores,top3); showPage('page-results');
 }
 function doValeurs(nom,prenom){
@@ -582,9 +625,13 @@ function doValeurs(nom,prenom){
   showValeursResults(`${nom} ${prenom}`,sel); showPage('page-results');
 }
 function doInt(nom,prenom){
-  const scores={}; Object.keys(II[lang]).forEach(k=>scores[k]=Object.keys(answers).filter(a=>a.startsWith(k+'_')&&answers[a]).length);
+  const scores={}, details={};
+  Object.keys(II['fr']).forEach(k=>{
+    scores[k]=Object.keys(answers).filter(a=>a.startsWith(k+'_')&&answers[a]).length;
+    details[k]=II['fr'][k].filter((_,i)=>answers[`${k}_${i}`]);
+  });
   const top3=Object.entries(scores).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]);
-  save({name:`${nom} ${prenom}`.trim(),scores,top3,lang,test:'intelligences',ts:Date.now()});
+  save({name:`${nom} ${prenom}`.trim(),scores,details,top3,lang,test:'intelligences',ts:Date.now()});
   showIntResults(`${nom} ${prenom}`,scores,top3); showPage('page-results');
 }
 
@@ -694,7 +741,9 @@ function renderTable(results){
   const tbody=document.getElementById('admin-tbody'), empty=document.getElementById('empty-state');
   if(!results.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
-  tbody.innerHTML=results.map(r=>{
+  // Store results for modal access
+  window._tableResults = results;
+  tbody.innerHTML=results.map((r,idx)=>{
     const d=new Date(r.ts), ds=`${d.getDate()}/${d.getMonth()+1} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
     const chips=(r.top3||[]).map(l=>{
       const col=r.test==='riasec'?RC[l]:r.test==='intelligences'?IC[l]:'#F59E0B';
@@ -706,7 +755,7 @@ function renderTable(results){
     else if(r.test==='intelligences'&&r.scores) detail=Object.entries(r.scores).map(([k,v])=>`${IN[lang][k]}:${v}`).join(' ');
     else if(r.test==='valeurs'&&r.selected) detail=r.selected.slice(0,6).join(', ')+(r.selected.length>6?'…':'');
     const cat=CATALOG.find(c=>c.id===r.test);
-    return `<tr>
+    return `<tr class="clickable" onclick="openDetail(${idx})">
       <td style="font-weight:600">${r.name||tr.anon}</td>
       <td><span style="font-size:11px;padding:3px 9px;border-radius:99px;background:var(--surface2);color:var(--text2)">${cat?cat.name[lang]:r.test}</span></td>
       <td><div class="chips">${chips}</div></td>
@@ -825,6 +874,83 @@ function exportExcel(){
 // ══════════════════════════════════════════
 //  ROUTER
 // ══════════════════════════════════════════
+function openDetail(idx){
+  const r = window._tableResults[idx];
+  if(!r) return;
+  const tr = T[lang];
+  const d = new Date(r.ts);
+  const ds = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+  const cat = CATALOG.find(c=>c.id===r.test);
+
+  document.getElementById('modal-name').textContent = r.name||tr.anon;
+  document.getElementById('modal-meta').textContent = `${cat?cat.name[lang]:r.test} — ${ds}`;
+
+  let body = '';
+
+  if(r.test==='riasec'){
+    const names = RN[lang];
+    ['R','I','A','S','E','C'].forEach(l=>{
+      const score = r.scores?.[l]||0;
+      const items = r.details?.[l]||[];
+      body += `<div class="detail-section">
+        <div class="detail-section-title">
+          <span class="detail-dot" style="background:${RC[l]}"></span>
+          ${l} — ${names[l]}
+          <span class="detail-score-badge" style="background:${RC[l]}">${score}/6</span>
+        </div>
+        ${items.length
+          ? `<div class="detail-items">${items.map(txt=>`<div class="detail-item" style="--item-color:${RC[l]}">${txt}</div>`).join('')}</div>`
+          : `<p class="detail-empty">${tl('Aucune réponse cochée','لا توجد إجابات')}</p>`
+        }
+      </div>`;
+    });
+  }
+  else if(r.test==='intelligences'){
+    const keys = Object.keys(II['fr']);
+    keys.forEach(k=>{
+      const score = r.scores?.[k]||0;
+      const items = r.details?.[k]||[];
+      body += `<div class="detail-section">
+        <div class="detail-section-title">
+          <span class="detail-dot" style="background:${IC[k]}"></span>
+          ${IN[lang][k]} <span style="font-weight:400;color:var(--text3)">(${IL[lang][k]})</span>
+          <span class="detail-score-badge" style="background:${IC[k]}">${score}/5</span>
+        </div>
+        ${items.length
+          ? `<div class="detail-items">${items.map(txt=>`<div class="detail-item" style="--item-color:${IC[k]}">${txt}</div>`).join('')}</div>`
+          : `<p class="detail-empty">${tl('Aucune réponse cochée','لا توجد إجابات')}</p>`
+        }
+      </div>`;
+    });
+  }
+  else if(r.test==='valeurs'){
+    const list = VL[lang];
+    const top3 = (r.top3||[]);
+    const allSel = (r.selected||[]);
+    body += `<div class="detail-section">
+      <div class="detail-section-title">${tl('Top 3 valeurs','أهم 3 قيم')}</div>
+      <div class="detail-val-grid">${top3.map(k=>{const v=list.find(x=>x.k===k); return v?`<span class="detail-val-chip top">${v.n}</span>`:''}).join('')}</div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">${tl('Toutes les valeurs sélectionnées','جميع القيم المختارة')} (${allSel.length})</div>
+      <div class="detail-val-grid">${allSel.map(k=>{const v=list.find(x=>x.k===k); return v?`<span class="detail-val-chip">${v.n}</span>`:''}).join('')}</div>
+    </div>`;
+  }
+  else {
+    body = `<p class="no-detail">${tl('Pas de détails disponibles','لا تتوفر تفاصيل')}</p>`;
+  }
+
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(e){
+  if(e && e.target !== document.getElementById('modal-overlay')) return;
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
 function loadEnabledTests(callback){
   // Always init defaults first
   CATALOG.forEach(c=>{ if(enabledTests[c.id]===undefined) enabledTests[c.id]=true; });
