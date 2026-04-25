@@ -612,8 +612,9 @@ function save(r){
 function doRiasec(nom,prenom){
   const scores={}, details={};
   ['R','I','A','S','E','C'].forEach(l=>{
-    scores[l]=Object.keys(answers).filter(k=>k.startsWith(l+'_')&&answers[k]).length;
-    details[l]=RI['fr'][l].filter((_,i)=>answers[`${l}_${i}`]);
+    const checked = RI['fr'][l].filter((_,i)=>answers[`${l}_${i}`]);
+    scores[l] = checked.length;
+    details[l] = checked.join('||');
   });
   const top3=Object.entries(scores).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]);
   save({name:`${nom} ${prenom}`.trim(),scores,details,top3,lang,test:'riasec',ts:Date.now()});
@@ -627,8 +628,9 @@ function doValeurs(nom,prenom){
 function doInt(nom,prenom){
   const scores={}, details={};
   Object.keys(II['fr']).forEach(k=>{
-    scores[k]=Object.keys(answers).filter(a=>a.startsWith(k+'_')&&answers[a]).length;
-    details[k]=II['fr'][k].filter((_,i)=>answers[`${k}_${i}`]);
+    const checked = II['fr'][k].filter((_,i)=>answers[`${k}_${i}`]);
+    scores[k] = checked.length;
+    details[k] = checked.join('||');
   });
   const top3=Object.entries(scores).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]);
   save({name:`${nom} ${prenom}`.trim(),scores,details,top3,lang,test:'intelligences',ts:Date.now()});
@@ -891,7 +893,7 @@ function openDetail(idx){
     const names = RN[lang];
     ['R','I','A','S','E','C'].forEach(l=>{
       const score = r.scores?.[l]||0;
-      const items = r.details?.[l]||[];
+      const items = r.details?.[l] ? r.details[l].split('||') : [];
       body += `<div class="detail-section">
         <div class="detail-section-title">
           <span class="detail-dot" style="background:${RC[l]}"></span>
@@ -909,7 +911,7 @@ function openDetail(idx){
     const keys = Object.keys(II['fr']);
     keys.forEach(k=>{
       const score = r.scores?.[k]||0;
-      const items = r.details?.[k]||[];
+      const items = r.details?.[k] ? r.details[k].split('||') : [];
       body += `<div class="detail-section">
         <div class="detail-section-title">
           <span class="detail-dot" style="background:${IC[k]}"></span>
